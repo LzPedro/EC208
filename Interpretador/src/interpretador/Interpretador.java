@@ -133,7 +133,10 @@ public class Interpretador {
         switch (funct) {
             case 32:
                 add(rd, rs, rt);
-                break;
+                break;                
+            case 34:
+                sub(rd, rs, rt);
+                break;                
             default:
                 System.out.println("Invalid Operation");
                 break;
@@ -167,7 +170,7 @@ public class Interpretador {
 
 //escreve no txt de memoria o registro
     private static void storeWord(int registro, int valor) throws IOException {
-        if (valor > Math.pow(2, BITSDADOS) - 1) {
+        if (valor > Math.pow(2, BITSDADOS) - 1 || valor < 0) {
             System.out.println("Tamanho do espaço da memória excedido!!!");
             JOptionPane.showMessageDialog(null, "Tamanho da posição de memória excedido!!!");
         } else {
@@ -200,5 +203,12 @@ public class Interpretador {
         rs = general_register[rs];
         rt = general_register[rt];
         Interpretador.rd = rs + rt;
+    
+    }
+    private static void sub(int rd, int rs, int rt) throws IOException {
+        //rd = rs + rt;
+        rs = general_register[rs];
+        rt = general_register[rt];
+        Interpretador.rd = rs - rt;
     }
 }
