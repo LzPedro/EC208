@@ -9,7 +9,6 @@ import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.util.ArrayList;
 
 /**
  *
@@ -53,7 +52,7 @@ public class Interpretador{
         pc = 0;
         	
         for (int i = 0; i < memoria.length; i++) {
-            memoria[i] = Integer.parseInt(mem.readLine());
+            memoria[i] = Integer.parseInt(mem.readLine(), 2);
         }
         mem.close();
         
@@ -64,7 +63,7 @@ public class Interpretador{
     //Identifica o tipo de codigo (R, I ou J)
     private static void type(RandomAccessFile raf) throws IOException{
         /*
-            5 primeiros bits correspondem ao tipo de codigo
+            6 primeiros bits correspondem ao tipo de codigo
             
             0 - Tipo R
             2 ou 3 - Tipo J
@@ -169,7 +168,7 @@ public class Interpretador{
     
 //escreve no txt de memoria o registro
     private static void storeWord (int registro, int valor) throws IOException{        
-        memoria[registro] = valor;
+          memoria[registro] = valor;
         
         fw = new FileWriter("memoria.txt", false);
         bw = new BufferedWriter(fw);
