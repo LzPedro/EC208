@@ -5,9 +5,7 @@
  */
 package interpretador;
 
-import java.io.BufferedReader;
 import java.io.BufferedWriter;
-import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -18,30 +16,42 @@ import java.io.RandomAccessFile;
  */
 public class Interpretador{
 
-    private static char format;
+    //Registradores
     private static int rs;
     private static int rt;
     private static int rd;
+    private static int pc;
+    
+    private static char format;    
     private static int shamt;
     private static int funct;
     private static int imm;
     private static int address;
-    private static String code;
-    private static int[] memoria;
-    private static int pc;
-    
+        
+    //Escritores
     private static FileWriter fw;
     private static BufferedWriter bw;
     
-    public static void main(String[] args) throws IOException {
+    //Leitor de memoria
+    private static final int BITSDADOS = 8;
+    private static RandomAccessFile mem;
+    private static int[] memoria;
+    
+    public static void main(String[] args) throws IOException {        
         RandomAccessFile raf = new RandomAccessFile("operacao.txt", "r");
         
         memoria = new int[32];
+        mem = new RandomAccessFile("memoria.txt", "r");
+        
         pc = 0;
+        	
+        for (int i = 0; i < memoria.length; i++) {
+            memoria[i] = Integer.parseInt(mem.readLine());
+        }
+        mem.close();
         
         type(raf);         
         raf.close();
-        
     }
 
     //Identifica o tipo de codigo (R, I ou J)
@@ -53,6 +63,7 @@ public class Interpretador{
             2 ou 3 - Tipo J
             Outros - Tipo I
         */
+        String code;
         
         raf.seek(0);
         while((code = raf.readLine()) != null){            
@@ -75,13 +86,12 @@ public class Interpretador{
                     format = 'I';
                     break;
             }
-            breakCode();
-            
+            breakCode(code);            
         }       
     }
     
-    //Separa o codigo em partes
-    private static void breakCode() throws IOException{
+    //Separa o codigo em partes de acordo com o tipo de instrução
+    private static void breakCode(String code) throws IOException{
         /*
             R - opcode(6) | rs(5) | rt(5) | rd(5) | shamt(5) | funct(6)
             I - opcode(6) | rs(5) | rt(5) | imm(16)
@@ -110,6 +120,7 @@ public class Interpretador{
         }
     }
     
+    //Executa instruções do tipo R
     private static void executeTypeR() throws IOException{
         switch(funct)
         {
@@ -122,6 +133,7 @@ public class Interpretador{
         }
     }
     
+    //Executa instruções do tipo I
     private static void executeTypeI() throws IOException{
         switch(funct)
         {
@@ -135,20 +147,35 @@ public class Interpretador{
         }
     }
     
-    private static int loadWord(int registro){
+    private static int loadWord(int registro) throws IOException{
+        mem = new RandomAccessFile("memoria.txt", "r");   
         
-        registro = memoria[registro];
+        mem.seek((BITSDADOS + 2)*registro);
+        registro = Integer.parseInt(mem.readLine(), 2);  
+        
+        mem.close();
         return registro;
     }
     
-    private static void storeWord (int registro, int valor) throws IOException{
-        //escreve no txt de memoria o registro
-       memoria[registro] = valor;
-       fw = new FileWriter("saida.txt", false);
-       bw = new BufferedWriter(fw);
+//escreve no txt de memoria o registro
+    private static void storeWord (int registro, int valor) throws IOException{        
+        memoria[registro] = valor;
+        
+        fw = new FileWriter("memoria.txt", false);
+        bw = new BufferedWriter(fw);
+
+        String info;
        
         for (int i = 0; i < memoria.length; i++) {
-            bw.write(Integer.toBinaryString(memoria[i])+"\n");
+            info = Integer.toBinaryString(memoria[i]);
+            
+            //Correção para que a string tenha a quantidade definida de bits
+            if(info.length() < BITSDADOS){
+                for (int j = info.length(); j < BITSDADOS; j++) {
+                    info = "0" + info;
+                }
+            } 
+            bw.write(info+"\n");            
         }
         bw.close();
     }
