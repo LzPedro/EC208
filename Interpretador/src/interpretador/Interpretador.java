@@ -9,6 +9,7 @@ import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.util.ArrayList;
 
 /**
  *
@@ -22,11 +23,13 @@ public class Interpretador{
     private static int rd;
     private static int pc;
     
-    private static char format;    
+    private static char format;
+    private static int opcode;
     private static int shamt;
     private static int funct;
     private static int imm;
     private static int address;
+    private static int[] general_register;
         
     //Escritores
     private static FileWriter fw;
@@ -40,6 +43,10 @@ public class Interpretador{
     public static void main(String[] args) throws IOException {        
         RandomAccessFile raf = new RandomAccessFile("operacao.txt", "r");
         
+        general_register = new int[32];
+        for (int i = 0; i < general_register.length; i++) {
+            general_register[i] = 0;
+        }
         memoria = new int[32];
         mem = new RandomAccessFile("memoria.txt", "r");
         
@@ -72,9 +79,9 @@ public class Interpretador{
 
             code = code.replaceAll(" ", "");
             String subCode = code.substring(0, 6);        
-            int value = Integer.parseInt(subCode,2);
+            opcode = Integer.parseInt(subCode,2);
 
-            switch (value) {
+            switch (opcode) {
                 case 0:
                     format = 'R';
                     break;
@@ -116,6 +123,7 @@ public class Interpretador{
                 rs = Integer.parseInt(code.substring(6, 11), 2);
                 rt = Integer.parseInt(code.substring(11, 16), 2);
                 imm = Integer.parseInt(code.substring(16, 32), 2);
+                executeTypeI();
                 break;
         }
     }
@@ -135,12 +143,14 @@ public class Interpretador{
     
     //Executa instruções do tipo I
     private static void executeTypeI() throws IOException{
-        switch(funct)
+        switch(opcode)
         {
-            case 32:
-                add(rd, rs, rt);
+            case 35:
+                general_register[rt] = loadWord(rs);
                 break;
-            
+            case 43:
+                storeWord(rs, general_register[rt]);
+                break;
             default:
                 System.out.println("Invalid Operation");
                 break;
@@ -175,15 +185,16 @@ public class Interpretador{
                     info = "0" + info;
                 }
             } 
-            bw.write(info+"\n");            
+            bw.write(info);
+            bw.newLine();
         }
         bw.close();
     }
     
     private static void add(int rd, int rs, int rt) throws IOException{
         //rd = rs + rt;
-        rs = loadWord(rs);
-        rt = loadWord(rt);
+        rs = general_register[rs];
+        rt = general_register[rt];
         rd = rs + rt;
     }
     
