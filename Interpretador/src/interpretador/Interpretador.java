@@ -37,25 +37,21 @@ public class Interpretador {
 
     //Leitor de memoria
     private static final int BITSDADOS = 8;
+    private static final int BITSENDERECO = 5;
     private static RandomAccessFile mem;
-    private static int[] memoria;
+    private static Cache[] cache;
 
     public static void main(String[] args) throws IOException {
         RandomAccessFile raf = new RandomAccessFile("operacao.txt", "r");
+
+        cache = new Cache[2];
 
         general_register = new int[32];
         for (int i = 0; i < general_register.length; i++) {
             general_register[i] = 0;
         }
-        memoria = new int[32];
-        mem = new RandomAccessFile("memoria.txt", "r");
 
         pc = 0;
-
-        for (int i = 0; i < memoria.length; i++) {
-            memoria[i] = Integer.parseInt(mem.readLine(), 2);
-        }
-        mem.close();
 
         type(raf);
         raf.close();
@@ -133,10 +129,10 @@ public class Interpretador {
         switch (funct) {
             case 32:
                 add(rd, rs, rt);
-                break;                
+                break;
             case 34:
                 sub(rd, rs, rt);
-                break;                
+                break;
             default:
                 System.out.println("Invalid Operation");
                 break;
@@ -157,8 +153,36 @@ public class Interpretador {
                 break;
         }
     }
+    
+    private static boolean cacheSearch(String dado){
+        int tag;
+        int bloco;
+        int palavra;
+        
+        bloco = Integer.parseInt(dado.substring(4));
+        palavra = Integer.parseInt(dado.substring(2, 4), 2);
+        tag = Integer.parseInt(dado.substring(0, 2), 2);
+        
+        if(cache[bloco].getPalavra()[palavra] == tag && cache[bloco].getPalavra()){
+            System.out.println("CACHE HIT!");
+            
+        }
+        
+    }
 
     private static int loadWord(int registro) throws IOException {
+
+        String dado = Integer.toBinaryString(registro);
+
+        //Correção para que a string tenha a quantidade definida de bits
+        if (dado.length() < BITSDADOS) {
+            for (int j = dado.length(); j < BITSENDERECO; j++) {
+                dado = "0" + dado;
+            }
+        }
+        
+        cacheSearch(dado);
+
         mem = new RandomAccessFile("memoria.txt", "r");
 
         mem.seek((BITSDADOS + 2) * registro);
@@ -168,32 +192,32 @@ public class Interpretador {
         return registro;
     }
 
-//escreve no txt de memoria o registro
+    //escreve no txt de memoria o registro
     private static void storeWord(int registro, int valor) throws IOException {
         if (valor > Math.pow(2, BITSDADOS) - 1 || valor < 0) {
             System.out.println("Tamanho do espaço da memória excedido!!!");
             JOptionPane.showMessageDialog(null, "Tamanho da posição de memória excedido!!!");
         } else {
-            memoria[registro] = valor;
+            //cache[registro] = valor;
 
-            fw = new FileWriter("memoria.txt", false);
-            bw = new BufferedWriter(fw);
-
-            String info;
-
-            for (int i = 0; i < memoria.length; i++) {
-                info = Integer.toBinaryString(memoria[i]);
-
-                //Correção para que a string tenha a quantidade definida de bits
-                if (info.length() < BITSDADOS) {
-                    for (int j = info.length(); j < BITSDADOS; j++) {
-                        info = "0" + info;
-                    }
-                }
-                bw.write(info);
-                bw.newLine();
-            }
-            bw.close();
+//            fw = new FileWriter("memoria.txt", false);
+//            bw = new BufferedWriter(fw);
+//
+//            String info;
+//
+//            for (int i = 0; i < cache.length; i++) {
+//                //info = Integer.toBinaryString(cache[i]);
+//
+//                //Correção para que a string tenha a quantidade definida de bits
+//                if (info.length() < BITSDADOS) {
+//                    for (int j = info.length(); j < BITSDADOS; j++) {
+//                        info = "0" + info;
+//                    }
+//                }
+//                bw.write(info);
+//                bw.newLine();
+//            }
+//            bw.close();
         }
 
     }
@@ -203,8 +227,9 @@ public class Interpretador {
         rs = general_register[rs];
         rt = general_register[rt];
         Interpretador.rd = rs + rt;
-    
+
     }
+
     private static void sub(int rd, int rs, int rt) throws IOException {
         //rd = rs + rt;
         rs = general_register[rs];
