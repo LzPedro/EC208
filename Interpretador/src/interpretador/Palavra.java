@@ -12,12 +12,12 @@ package interpretador;
 public class Palavra {
     
     private boolean validade;
-    private int tag;
+    private String tag;
     private String dado;
 
     public Palavra() {
         validade = false;
-        tag = -1;
+        tag = null;
     }
 
     public boolean isValidade() {
@@ -28,11 +28,11 @@ public class Palavra {
         this.validade = validade;
     }
 
-    public int getTag() {
+    public String getTag() {
         return tag;
     }
 
-    public void setTag(int tag) {
+    public void setTag(String tag) {
         this.tag = tag;
     }
 

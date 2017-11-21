@@ -22,7 +22,7 @@ public class Cache {
     }
 
     public void inserePalavra(String dado, String endereco) {
-        int tag = Integer.parseInt(endereco.substring(0, 2), 2);
+        String tag = endereco.substring(0, 2);
         int pos = Integer.parseInt(endereco.substring(2, 4), 2);
         
         palavra[pos].setTag(tag);
@@ -38,10 +38,10 @@ public class Cache {
 
     public String cacheSearch(String dado) {
         int pos = Integer.parseInt(dado.substring(2, 4), 2);
-        int tag = Integer.parseInt(dado.substring(0, 2), 2);
+        String tag = dado.substring(0, 2);
 
         if (palavra[pos].isValidade()) {
-            if (palavra[pos].getTag() == tag) {
+            if (palavra[pos].getTag().equals(tag)) {
                 return palavra[pos].getDado();
             }
         }
