@@ -6,9 +6,12 @@
 package interpretador;
 
 import java.io.BufferedWriter;
+import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.util.ArrayList;
+import java.util.List;
 import javax.swing.JOptionPane;
 
 /**
@@ -38,13 +41,15 @@ public class Interpretador {
     //Leitor de memoria
     private static final int BITSDADOS = 8;
     private static final int BITSENDERECO = 5;
+    private static final int NUMPALAVRAS = 4;
+    private static final int NUMENDERECOS = 32;
     private static RandomAccessFile mem;
     private static Cache[] cache;
 
     public static void main(String[] args) throws IOException {
-        RandomAccessFile raf = new RandomAccessFile("operacao.txt", "r");
-
         cache = new Cache[2];
+        cache[0] = new Cache();
+        cache[1] = new Cache();
 
         general_register = new int[32];
         for (int i = 0; i < general_register.length; i++) {
@@ -52,13 +57,11 @@ public class Interpretador {
         }
 
         pc = 0;
-
-        type(raf);
-        raf.close();
+        type(cache);
     }
 
     //Identifica o tipo de codigo (R, I ou J)
-    private static void type(RandomAccessFile raf) throws IOException {
+    private static void type(Cache[] cache) throws IOException {
         /*
             6 primeiros bits correspondem ao tipo de codigo
             
@@ -67,6 +70,7 @@ public class Interpretador {
             Outros - Tipo I
          */
         String code;
+        RandomAccessFile raf = new RandomAccessFile("operacao.txt", "r");
 
         raf.seek(0);
         while ((code = raf.readLine()) != null) {
@@ -89,12 +93,12 @@ public class Interpretador {
                     format = 'I';
                     break;
             }
-            breakCode(code);
+            breakCode(code, cache);
         }
     }
 
     //Separa o codigo em partes de acordo com o tipo de instrução
-    private static void breakCode(String code) throws IOException {
+    private static void breakCode(String code, Cache[] cache) throws IOException {
         /*
             R - opcode(6) | rs(5) | rt(5) | rd(5) | shamt(5) | funct(6)
             I - opcode(6) | rs(5) | rt(5) | imm(16)
@@ -108,7 +112,7 @@ public class Interpretador {
                 rd = Integer.parseInt(code.substring(16, 21), 2);
                 shamt = Integer.parseInt(code.substring(21, 26), 2);
                 funct = Integer.parseInt(code.substring(26, 32), 2);
-                executeTypeR();
+                executeTypeR(cache);
                 break;
 
             case 'J':
@@ -119,13 +123,13 @@ public class Interpretador {
                 rs = Integer.parseInt(code.substring(6, 11), 2);
                 rt = Integer.parseInt(code.substring(11, 16), 2);
                 imm = Integer.parseInt(code.substring(16, 32), 2);
-                executeTypeI();
+                executeTypeI(cache);
                 break;
         }
     }
 
     //Executa instruções do tipo R
-    private static void executeTypeR() throws IOException {
+    private static void executeTypeR(Cache[] cache) throws IOException {
         switch (funct) {
             case 32:
                 add(rd, rs, rt);
@@ -140,84 +144,112 @@ public class Interpretador {
     }
 
     //Executa instruções do tipo I
-    private static void executeTypeI() throws IOException {
+    private static void executeTypeI(Cache[] cache) throws IOException {
         switch (opcode) {
             case 35:
-                general_register[rt] = loadWord(rs);
+                general_register[rt] = loadWord(rs, cache);
                 break;
             case 43:
-                storeWord(rs, rd);
+                storeWord(rs, rd, cache);
                 break;
             default:
                 System.out.println("Invalid Operation");
                 break;
         }
     }
-    
-    private static boolean cacheSearch(String dado){
-        int tag;
-        int bloco;
-        int palavra;
-        
-        bloco = Integer.parseInt(dado.substring(4));
-        palavra = Integer.parseInt(dado.substring(2, 4), 2);
-        tag = Integer.parseInt(dado.substring(0, 2), 2);
-        
-        if(cache[bloco].getPalavra()[palavra] == tag && cache[bloco].getPalavra()){
-            System.out.println("CACHE HIT!");
+
+    private static int dataSearch(String dado, int registro, Cache[] cache) throws FileNotFoundException, IOException {
+        int bloco = Integer.parseInt(dado.substring(4));
+        String val = cache[bloco].cacheSearch(dado);
+
+        if (val != null) {
+            System.out.println("Cache Hit!");
+        } else {
+            System.out.println("Cache Miss!");
+
+            mem = new RandomAccessFile("memoria.txt", "r");
+
+            int palavrasPorRegiao = NUMENDERECOS / NUMPALAVRAS;
+            int numRegioes = registro % palavrasPorRegiao;
+
+            mem.seek((BITSDADOS + 2) * registro);
+            val = mem.readLine();
+
+            int posicao, j;
             
+            if(registro < 8)            j = 0;
+            else if(registro < 16)      j = 1;
+            else if(registro < 24)      j = 2;
+            else                        j = 3;
+            
+            posicao = (palavrasPorRegiao) * j + bloco; 
+            for (int i = 0; i < NUMPALAVRAS; i++) {                 
+                mem.seek((BITSDADOS + 2) * posicao);
+                String valorCache = mem.readLine();
+               
+                String endereco = Integer.toBinaryString(posicao);
+                if(endereco.length() < BITSENDERECO)    endereco = complete(endereco, BITSENDERECO);
+                 
+                cache[bloco].inserePalavra(valorCache, endereco);
+                posicao += 2;
+            }
+
+            mem.close();
         }
-        
+        return Integer.parseInt(val, 2);
     }
 
-    private static int loadWord(int registro) throws IOException {
+    private static int loadWord(int registro, Cache[] cache) throws IOException {
 
         String dado = Integer.toBinaryString(registro);
 
         //Correção para que a string tenha a quantidade definida de bits
-        if (dado.length() < BITSDADOS) {
-            for (int j = dado.length(); j < BITSENDERECO; j++) {
-                dado = "0" + dado;
-            }
+        if (dado.length() < BITSENDERECO) {
+            dado = complete(dado, BITSENDERECO);
         }
-        
-        cacheSearch(dado);
 
-        mem = new RandomAccessFile("memoria.txt", "r");
+        int val = dataSearch(dado, registro, cache);
 
-        mem.seek((BITSDADOS + 2) * registro);
-        registro = Integer.parseInt(mem.readLine(), 2);
-
-        mem.close();
-        return registro;
+        return val;
     }
 
     //escreve no txt de memoria o registro
-    private static void storeWord(int registro, int valor) throws IOException {
+    private static void storeWord(int registro, int valor, Cache[] cache) throws IOException {
         if (valor > Math.pow(2, BITSDADOS) - 1 || valor < 0) {
             System.out.println("Tamanho do espaço da memória excedido!!!");
             JOptionPane.showMessageDialog(null, "Tamanho da posição de memória excedido!!!");
         } else {
-            //cache[registro] = valor;
+            String posicaoMemoria = Integer.toBinaryString(registro);
+            if(posicaoMemoria.length() < BITSENDERECO)  posicaoMemoria = complete(posicaoMemoria, BITSENDERECO);
 
-//            fw = new FileWriter("memoria.txt", false);
-//            bw = new BufferedWriter(fw);
-//
-//            String info;
-//
-//            for (int i = 0; i < cache.length; i++) {
-//                //info = Integer.toBinaryString(cache[i]);
-//
-//                //Correção para que a string tenha a quantidade definida de bits
-//                if (info.length() < BITSDADOS) {
-//                    for (int j = info.length(); j < BITSDADOS; j++) {
-//                        info = "0" + info;
-//                    }
-//                }
-//                bw.write(info);
-//                bw.newLine();
-//            }
-//            bw.close();
+            int bloco = Integer.parseInt(posicaoMemoria.substring(4));
+            cache[bloco].invalidaDado(posicaoMemoria);
+            
+            List<String> txt = new ArrayList<>();
+             
+            mem = new RandomAccessFile("memoria.txt", "r");
+            String valorMemoria = mem.readLine();
+            while(valorMemoria != null){
+                txt.add(valorMemoria);
+                valorMemoria = mem.readLine();
+            }
+            
+            String val = Integer.toBinaryString(valor);
+            if(val.length() < BITSDADOS)   complete(val, BITSDADOS);
+            
+            txt.set(registro, val);
+            
+            fw = new FileWriter("memoria.txt", false);
+            bw = new BufferedWriter(fw);
+            
+            for (int i = 0; i < txt.size(); i++) {                
+                if(i == txt.size() - 1){
+                    bw.write(txt.get(i));
+                }else{
+                    bw.write(txt.get(i) + "\n");
+                }
+            }  
+            bw.close();
         }
 
     }
@@ -235,5 +267,12 @@ public class Interpretador {
         rs = general_register[rs];
         rt = general_register[rt];
         Interpretador.rd = rs - rt;
+    }
+
+    private static String complete(String dado, int tam) {
+        for (int j = dado.length(); j < tam; j++) {
+            dado = "0" + dado;
+        }
+        return dado;
     }
 }

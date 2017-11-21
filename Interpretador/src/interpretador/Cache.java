@@ -10,46 +10,41 @@ package interpretador;
  * @author aluno
  */
 public class Cache {
-    
+
     private final int NUM_PALAVRAS = 4;
-    
-    private boolean validade;
-    private int[] palavra;
-    private int dado;
+    private Palavra[] palavra;
 
     public Cache() {
-        palavra = new int[NUM_PALAVRAS];
-        validade = false;
-        dado = 0;
-        
-        for (int i = 0; i < 10; i++) {
-            palavra[i] = 0;
+        palavra = new Palavra[NUM_PALAVRAS];
+        for (int i = 0; i < palavra.length; i++) {
+            palavra[i] = new Palavra();
         }
     }
 
-    public boolean isValidade() {
-        return validade;
-    }
-
-    public void setValidade(boolean validade) {
-        this.validade = validade;
-    }
-
-    public int[] getPalavra() {
-        return palavra;
-    }
-
-    public void setPalavra(int[] palavra) {
-        this.palavra = palavra;
-    }
-
-    public int getDado() {
-        return dado;
-    }
-
-    public void setDado(int dado) {
-        this.dado = dado;
+    public void inserePalavra(String dado, String endereco) {
+        int tag = Integer.parseInt(endereco.substring(0, 2), 2);
+        int pos = Integer.parseInt(endereco.substring(2, 4), 2);
+        
+        palavra[pos].setTag(tag);
+        palavra[pos].setValidade(true);
+        palavra[pos].setDado(dado);
     }
     
-    
+    public void invalidaDado(String endereco){
+        int pos = Integer.parseInt(endereco.substring(2, 4), 2);
+        
+        palavra[pos].setValidade(false);
+    }
+
+    public String cacheSearch(String dado) {
+        int pos = Integer.parseInt(dado.substring(2, 4), 2);
+        int tag = Integer.parseInt(dado.substring(0, 2), 2);
+
+        if (palavra[pos].isValidade()) {
+            if (palavra[pos].getTag() == tag) {
+                return palavra[pos].getDado();
+            }
+        }
+        return null;
+    }
 }
